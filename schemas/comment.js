@@ -2,11 +2,12 @@ const mongoose = require("mongoose");
 
 const commentSchema = new mongoose.Schema({ 
     postId: {
-    type: String,
+      type: String,
       required: true, 
    },
     commentId: {
       type: String,
+      required: true, 
     },
     user: {
       type: String

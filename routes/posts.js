@@ -10,6 +10,7 @@ router.post("/posts", async (req, res) => {
   const { title, user, password, content } = req.body;
   const createdAt = new Date().toLocaleString();
   const postId = uuidv4();
+
   if (!title.length) {
     return res.status(400).json({
       success: false,
@@ -28,18 +29,21 @@ router.post("/posts", async (req, res) => {
   } else if (!content.length) {
     return res.status(400).json({
       success: false,
-      errorMessage: "내용을 입력해주세요.",
+      errorMessage: "게시글 내용을 입력해주세요.",
     });
   } else {
     await Post.create({
-      postId: postId,
+      postId: postId, // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
       title: title,
       user: user,
       content: content,
       password: password,
-      date: createdAt,
+      createdAt: createdAt 
     });
-    return res.status(200).json({ comment: "게시글이 작성되었습니다." });
+    return res.status(201).json({ 
+      success: true,
+      message: "게시글이 작성되었습니다." 
+    });
   }
 });
 
@@ -48,18 +52,19 @@ router.post("/posts", async (req, res) => {
 // 2. 전체 게시글 목록 조회 GET API  (성공)
 router.get("/posts", async (req, res) => {
   const allPosts = await Post.find()
-    .select({
-      //1 = true, 0 = false
+    .select({ //1 = true, 0 = false
       postId: 1,
       user: 1,
       title: 1,
       content: 1,
       createdAt: 1,
+      password: 0,
       _id: 0,
+      __v: 0
     })
-    .sort({ date: -1 })
+    .sort({ createdAt: -1 })
     .exec();
-    return res.json({ allPosts: allPosts });
+    return res.status(200).json({ allPosts: allPosts });
 });
 // const filteredPosts = allPosts.map( post => {
 //   const {password, ...rest} = post     // ...rest가 스키마정보 틀까지 다 가져옴. 이렇게쓰면 X
@@ -71,14 +76,22 @@ router.get("/posts", async (req, res) => {
 // 3. 단일 게시글 조회 GET API (성공)
 router.get("/posts/:postId", async (req, res) => {
   const postId = req.params.postId;
-  const data = await Post.findOne({postId: postId}, {password: 0}, {_id: 0})
-  .catch(console.error);
+  const data = await Post.findOne(
+    {postId: postId}, 
+    { //1 = true, 0 = false
+      postId: 0,
+      password: 0,
+      _id: 0,
+      __v: 0
+    })
+   .catch(console.error);
   if (!data) {
   return res.status(400).json({
+     success: false,
      errorMessage: "존재하지 않는 게시물입니다." 
     });
   }
-  return res.json({ singlePost: data });
+  return res.status(200).json({ singlePost: data });
   });
 
 
@@ -90,8 +103,8 @@ router.put("/posts/:_postId", async (req, res) => {
   const content = req.body.content;
 
   const data = await Post.find({ postId: postId }).catch(console.error);
-  const existPw = data[0].password; // Post스키마에있는 data는 배열형태로 나온다. 0번째인덱스 패스워드.
-  // console.log(data);
+  const existPw = data[0].password; // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
+  // console.log(data); 
   // console.log(existPw);
   // console.log(newPw);
 
@@ -100,21 +113,26 @@ router.put("/posts/:_postId", async (req, res) => {
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
     });
-  } else if (!newPw.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요.",
-    });
   } else if (!data) {
     return res.status(400).json({
       success: false,
       errorMessage: "게시글 조회에 실패하였습니다.",
     });
+  } else if (!content.length) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "게시글 내용을 입력해주세요.",
+    });    
+  } else if (!newPw.length) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "비밀번호를 입력해주세요.",
+    });
   } else if (existPw !== newPw) {
     return res.status(400).json({
       success: false,
       errorMessage: "비밀번호가 일치하지 않습니다.",
-    });
+    });    
   } else if (existPw === newPw) {
     await Post.updateOne(
       { postId: postId }, 
@@ -122,8 +140,8 @@ router.put("/posts/:_postId", async (req, res) => {
       )
   };
     return res.status(200).json({
-    success: true,
-    message: "게시글을 수정하였습니다.",
+      success: true,
+      message: "게시글을 수정하였습니다.",
   });
 });
 
@@ -135,25 +153,25 @@ router.delete("/posts/:_postId", async (req, res) => {
   const newPw = req.body.password;
 
   const data = await Post.find({ postId: postId }).catch(console.error);
-  const existPw = data[0].password;
+  const existPw = data[0].password; // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
   // console.log(data);
   // console.log(existPw);
   // console.log(newPw);
 
-  if (!postId || !newPw.length) {
+  if (!postId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
-    });
-  } else if (!newPw.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요.",
     });
   } else if (!data) {
     return res.status(400).json({
       success: false,
       errorMessage: "게시글 조회에 실패하였습니다.",
+    });
+  } else if (!newPw.length) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "비밀번호를 입력해주세요.",
     });
   } else if (existPw !== newPw) {
     return res.status(400).json({
@@ -164,8 +182,8 @@ router.delete("/posts/:_postId", async (req, res) => {
     await Post.deleteOne({ postId });
   }
     return res.status(200).json({
-    success: true,
-    message: "게시글을 삭제하였습니다.",
+      success: true,
+      message: "게시글을 삭제하였습니다.",
   });
 });
 
