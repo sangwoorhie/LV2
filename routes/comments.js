@@ -8,20 +8,16 @@ const { v4: uuidv4 } = require("uuid");
 
 router.get("/comments/:_postId", async (req, res) => {
   const postId = req.params._postId;
-  const comments = await Comment.find({'postId': postId}).catch(console.error);  
+  const comments = await Comment.find({'postId': postId}, {password: 0}, {_id: 0}).catch(console.error);  
   
-  const filteredComment = comments.map( post => {
-  const {password, ...rest} = post
-  return rest;
-})
-
-res.json({"comments" : filteredComment})
+res.json({"comments" : comments})
 });
 
-// 7. 댓글 작성 POST   /comments/:_postId (틀 완성, postId 코딩에 넣고 실행해야함)
+
+// 7. 댓글 작성 POST   (성공)
 
 router.post("/comments/:postId", async (req, res) => {
-  const postId = req.params._postId;
+  const postId = req.params.postId;
   const { user, password, content } = req.body;
   // var comments = await Comment.find({'postId': postId}).catch(console.error);  
   // var comments = postId
@@ -30,10 +26,15 @@ router.post("/comments/:postId", async (req, res) => {
   const createdAt = new Date().toLocaleString();
   const commentId = uuidv4();
 
-  if (!user || !postId) {
+  if (!postId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다."
+    });
+  } else if (!user) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "유저명을 입력해주세요."
     });
   } else if (!password.length) {
     return res.status(400).json({
@@ -47,6 +48,7 @@ router.post("/comments/:postId", async (req, res) => {
     });
   } else {
   await Comment.create({ 
+    postId : postId,
     commentId : commentId,
     user :user, 
     password: password,
@@ -60,21 +62,26 @@ router.post("/comments/:postId", async (req, res) => {
 }});
 
 
-// 8. 댓글 수정 PUT   /comments/:_commentId (틀 완성, postId 코딩에 넣고 실행해야함)
+// 8. 댓글 수정 PUT  (성공)
 
-router.put("/comments/:commentId", async (req, res) => {
-  const commentId = req.params._commentId;
+router.put("/posts/:postId/comments/:commentId", async (req, res) => {
+  const commentId = req.params.commentId;
+  const postId = req.params.postId;
   const newPw = req.body.password;
   const content = req.body.content;
-   const postId = await Comment.find({'postId': postId}) // 해당게시물과 일치하는 id를 가진 코멘트스키마의 게시물id
 
   const data = await Comment.find({commentId:commentId}).catch(console.error); 
-  const existPw = data.password 
+  const existPw = data[0].password 
 
-  if (!commentId || !newPw.length) {
+  if (!commentId || !postId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다."
+    });
+  } else if (!newPw.length) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "비밀번호를 입력해주세요."
     });
   } else if (!data) {
     return res.status(400).json({
@@ -93,31 +100,36 @@ router.put("/comments/:commentId", async (req, res) => {
     });
   } else if (existPw === newPw) {
     await Post.updateOne(
-      { postId: goodsId }, 
+      { commentId: commentId }, 
       { $set: { content: content } }
       );
   };
   res.status(200).json({ 
     success: true,
-    message: "게시글을 수정하였습니다." 
+    message: "댓글을 수정하였습니다." 
   });
 });
 
 
-// 9. 댓글 삭제 DELETE   /comments/:_commentId (틀 완성, postId 코딩에 넣고 실행해야함)
+// 9. 댓글 삭제 DELETE  (성공)
 
-router.delete("/comments/:commentId", async (req, res) => {
-  const commentId = req.params._commentId;
+router.delete("/posts/:postId/comments/:commentId", async (req, res) => {
+  const commentId = req.params.commentId;
+  const postId = req.params.postId;
   const newPw = req.body.password;
-  const postId = await Comment.find({'postId': postId}) // 해당게시물과 일치하는 id를 가진 코멘트스키마의 게시물id
-
+ 
   const data = await Comment.find({commentId: commentId}).catch(console.error);
-  const existPw = data.password
+  const existPw = data[0].password 
 
-  if (!commentId || !newPw.length) {
+  if (!commentId || !postId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
+    });
+  } else if (!newPw.length) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "비밀번호를 입력해주세요."
     });
   } else if (!data) {
     return res.status(400).json({
