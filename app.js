@@ -14,7 +14,7 @@ app.listen(port, () => {
 
 app.use(express.json()); // 전역 미들웨어 body-parser
 
-// localhost:3000/api
+// localhost:3000
 app.use("", [postsRouter, commentsRouter]); 
 
 app.get('/', (req, res) => {

@@ -3,10 +3,10 @@ const mongoose = require("mongoose");
 const commentSchema = new mongoose.Schema({ 
     postId: {
     type: String,
-    required: true, 
+      required: true, 
    },
     commentId: {
-      type: String
+      type: String,
     },
     user: {
       type: String
