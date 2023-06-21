@@ -14,11 +14,6 @@ const passwordCheck = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{4,}$/;
 
 
 // 1. 회원 가입 POST : localhost:3000/api/signup (성공)
-// {
-//     "nickname" : "NickName123", 
-//     "password" : "password123", 
-//     "confirmPassword" : "password123"
-//     }
 
 router.post('/signup', async(req, res) => {
     const { nickname, password, confirmPassword } = req.body;

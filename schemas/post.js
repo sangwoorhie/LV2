@@ -6,15 +6,15 @@ const postSchema = new mongoose.Schema(
       type: String,
       required: true, 
     },
-    // user: {
-    //   type: String
-    // },
+    userId : {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    nickname : {
+      type: String,
+    },
     title: {
       type:String  
     },
-    // password: {
-    //   type:String    
-    // },
     content: {
       type:String 
     },
@@ -25,10 +25,10 @@ const postSchema = new mongoose.Schema(
     //   // unique: true,
     //   // default: Date.now,
     },
-  // {
-  //   timestamp: true, // 시간자동생성(routes에 함수있음)
-  //   versionKey: false, // __v 없애기
-  // }
+    // {
+    // // timestamp: true, // 시간자동생성(routes에 함수있음)
+    // versionKey: false, // __v 없애기
+    // }
 
   });
 

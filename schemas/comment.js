@@ -5,24 +5,22 @@ const commentSchema = new mongoose.Schema(
     postId: {
       type: String,
       required: true, 
-      // type: mongoose.Schema.Types.ObjectId,
-      // ref: "Post",
-   },
+      },
+    userId : {
+      type: mongoose.Schema.Types.ObjectId,
+    },
     commentId: {
       type: String,
       required: true, 
     },
-    // user: {
-    //   type: String,
-    // },
-    // password: {
-    //   type:String, 
-    // },
+    nickname : {
+      type: String,
+    },
     content: {
-      type:String,
+      type: String,
     },
     createdAt: {
-      type:String,
+      type: String,
       // type: Date,
       // required: true,
       // unique: true,

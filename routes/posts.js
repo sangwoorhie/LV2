@@ -7,8 +7,12 @@ const { v4: uuidv4 } = require("uuid"); // posts에 자동생성되는 postsId
 
 
 
-// 1. 게시글 작성 API  (POST : localhost:3000/api/posts)
+// 1. 게시글 작성 API  (POST : localhost:3000/api/posts) (성공)
 router.post("/posts", authMiddleware, async (req, res) => {
+  console.log('-'.repeat(40));
+  console.log("res.local.user =>", res.locals.user);
+  console.log('-'.repeat(40));
+
   const { title, content } = req.body;
   const { userId } = res.locals.user; 
   const createdAt = new Date().toLocaleString();
@@ -19,15 +23,21 @@ router.post("/posts", authMiddleware, async (req, res) => {
       success: false,
       errorMessage: "제목을 입력해주세요.",
     });
+  } else if (!authMiddleware || !res.locals.user) {
+    return res.status(400).json({
+      success: false,
+      errorMessage: "데이터 형식이 올바르지 않습니다.",
+    });
   } else if (!content.length) {
     return res.status(400).json({
       success: false,
-      errorMessage: "게시글 내용을 입력해주세요.",
+      errorMessage: "게시글 내용을 입력해주세요.", 
     });
   } else {
     await Post.create({
       postId: postId, // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
       userId: userId,
+      // nickname: nickname,
       title: title,
       content: content,
       createdAt: createdAt 
@@ -41,25 +51,23 @@ router.post("/posts", authMiddleware, async (req, res) => {
 
 
 
-// 2. 전체 게시글 목록 조회 API (GET : localhost:3000/api/posts)
+// 2. 전체 게시글 목록 조회 API (GET : localhost:3000/api/posts) (성공)
 router.get("/posts", async (req, res) => {
-  const nickname = User.findOne({nickname: nickname})
   const allPosts = await Post.find()
     .select({ //1 = true, 0 = false
       postId: 1,
-      title: 1,
-      content: 0,    //목록조회에서 게시글내용은 안보여도됨
+      title: 1,   //목록조회에서 게시글내용은 안보여도됨
       createdAt: 1,
       _id: 0,
-      __v: 0
     })
     .sort({ createdAt: -1 })
     .exec();
-    return res.status(200).json({ allPosts: allPosts });
+    // const nickname = await User.find({nickname})
+    return res.status(200).json({ allPosts }); // nickname
 });
 
 
-// 3. 단일 게시글 조회 API (GET : localhost:3000/api/posts/:postId)
+// 3. 단일 게시글 조회 API (GET : localhost:3000/api/posts/:postId) (성공)
 router.get("/posts/:postId", async (req, res) => {
   const postId = req.params.postId;
   const data = await Post.findOne(
@@ -82,7 +90,7 @@ router.get("/posts/:postId", async (req, res) => {
 
 
 
-// 4. 게시글 수정 API (PUT : localhost:3000/api/posts/:postId)
+// 4. 게시글 수정 API (PUT : localhost:3000/api/posts/:postId) (성공)
 router.put("/posts/:postId", authMiddleware, async (req, res) => {
   const postId = req.params.postId;
   const {title, content} = req.body;
@@ -124,7 +132,7 @@ router.put("/posts/:postId", authMiddleware, async (req, res) => {
 
 
 
-// 5. 게시글 삭제 API (DELETE : localhost:3000/api/posts/:postId)
+// 5. 게시글 삭제 API (DELETE : localhost:3000/api/posts/:postId) (성공)
 router.delete("/posts/:postId", authMiddleware, async (req, res) => {
   const postId = req.params.postId;
   const { userId } = res.locals.user;

@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.virtual("userId").get(function() {
     return this._id.toHexString() // mongoose에 있는 기본Id를 toHexString함수 사용한다
+    // return mongoose.Schema.Types.ObjectId
 });
 
 UserSchema.set("toJson", {

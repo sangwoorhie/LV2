@@ -7,7 +7,7 @@ const authMiddleware = require("../middlewares/auth-middleware.js")
 const { v4: uuidv4 } = require("uuid"); 
 
 
-// 6. 댓글 목록 조회 API (GET : localhost:3000/api/comments/:postId)
+// 6. 댓글 목록 조회 API (GET : localhost:3000/api/comments/:postId) (성공)
 router.get("/comments/:postId", async (req, res) => {
   const { postId } = req.params;
   const comments = await Comment.find(
@@ -34,12 +34,12 @@ router.get("/comments/:postId", async (req, res) => {
 
 
 
-// 7. 댓글 작성 API (POST : localhost:3000/api/comments/:postId)
+// 7. 댓글 작성 API (POST : localhost:3000/api/comments/:postId) (성공)
 router.post("/comments/:postId", authMiddleware, async (req, res) => { 
   const postId = req.params.postId;
   const {content} = req.body;
   const {userId} = res.locals.user;
-  const nickname = User.findOne({nickname: nickname})
+  // const nickname = User.findOne({nickname: nickname})
  
   const createdAt = new Date().toLocaleString();
   const commentId = uuidv4();
@@ -59,7 +59,7 @@ router.post("/comments/:postId", authMiddleware, async (req, res) => {
       postId : postId,
       userId: userId,        //create에 위에서 변수선언한 postId를 넣음으로써 postId를 해당 댓글에 생성한다
       commentId : commentId,  // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
-      nickname : nickname,
+      // nickname : nickname,
       content: content,  
       createdAt: createdAt,
     }); 
@@ -72,7 +72,7 @@ router.post("/comments/:postId", authMiddleware, async (req, res) => {
 
 
 
-// 8. 댓글 수정 API (PUT : localhost:3000/api/posts/:postId/comments/:commentId)
+// 8. 댓글 수정 API (PUT : localhost:3000/api/posts/:postId/comments/:commentId) (성공)
 router.put("/posts/:postId/comments/:commentId", authMiddleware, async (req, res) => { 
   const commentId = req.params.commentId;
   const postId = req.params.postId;
@@ -110,14 +110,13 @@ router.put("/posts/:postId/comments/:commentId", authMiddleware, async (req, res
 
 
 
-// 9. 댓글 삭제 API (DELETE : localhost:3000/api/posts/:postId/comments/:commentId)
+// 9. 댓글 삭제 API (DELETE : localhost:3000/api/posts/:postId/comments/:commentId) (성공)
 router.delete("/posts/:postId/comments/:commentId", authMiddleware, async (req, res) => {
   const commentId = req.params.commentId;
   const postId = req.params.postId;
   const {userId} = res.locals.user;
  
   const data = await Comment.find({userId, commentId}).catch(console.error);
-  const existPw = data[0].password // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
 
   if (!commentId || !postId || !userId) {
     return res.status(400).json({
