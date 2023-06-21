@@ -2,12 +2,14 @@ const express = require("express");
 const router = express.Router();
 const Comment = require("../schemas/comment.js");
 const Post = require("../schemas/post.js");
-const { v4: uuidv4 } = require("uuid"); // comments에 자동생성되는 commentId
+const User = require("../schemas/user.js")
+const authMiddleware = require("../middlewares/auth-middleware.js")
+const { v4: uuidv4 } = require("uuid"); 
 
 
-// 6. 댓글 목록 조회 GET   (성공)
-router.get("/comments/:_postId", async (req, res) => {
-  const postId = req.params._postId;
+// 6. 댓글 목록 조회 API (GET : localhost:3000/api/comments/:postId)
+router.get("/comments/:postId", async (req, res) => {
+  const { postId } = req.params;
   const comments = await Comment.find(
     {'postId': postId}, 
     { //1 = true, 0 = false
@@ -16,35 +18,36 @@ router.get("/comments/:_postId", async (req, res) => {
       _id: 0,
       __v: 0
     })
-    .catch(console.error);  
-  
-  return res.status(200).json({"comments" : comments})
-});
+    .sort({createdAt: -1})
+    .catch(console.error); 
+
+    if (!postId) {
+      return res.status(400).json({
+        success: false,
+        errorMessage: "데이터 형식이 올바르지 않습니다."
+      })
+    } else {
+       return res.status(200).json({
+        "comments" : comments}
+        )}
+    });
 
 
 
-// 7. 댓글 작성 POST   (성공)
-router.post("/comments/:postId", async (req, res) => {
+// 7. 댓글 작성 API (POST : localhost:3000/api/comments/:postId)
+router.post("/comments/:postId", authMiddleware, async (req, res) => { 
   const postId = req.params.postId;
-  const { user, password, content } = req.body;
-
+  const {content} = req.body;
+  const {userId} = res.locals.user;
+  const nickname = User.findOne({nickname: nickname})
+ 
   const createdAt = new Date().toLocaleString();
   const commentId = uuidv4();
 
-  if (!postId) {
+  if (!postId || !userId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다."
-    });
-  } else if (!user) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "유저명을 입력해주세요."
-    });
-  } else if (!password.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요."
     });
   } else if (!content.length) {
     return res.status(400).json({
@@ -53,12 +56,12 @@ router.post("/comments/:postId", async (req, res) => {
     });
   } else {
       await Comment.create({ 
-      postId : postId,        //create에 위에서 변수선언한 postId를 넣음으로써 postId를 해당 댓글에 생성한다
+      postId : postId,
+      userId: userId,        //create에 위에서 변수선언한 postId를 넣음으로써 postId를 해당 댓글에 생성한다
       commentId : commentId,  // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
-      user: user, 
-      password: password,
+      nickname : nickname,
       content: content,  
-      createdAt: createdAt
+      createdAt: createdAt,
     }); 
 
     return res.status(201).json({ 
@@ -69,17 +72,16 @@ router.post("/comments/:postId", async (req, res) => {
 
 
 
-// 8. 댓글 수정 PUT  (성공)
-router.put("/posts/:postId/comments/:commentId", async (req, res) => {
+// 8. 댓글 수정 API (PUT : localhost:3000/api/posts/:postId/comments/:commentId)
+router.put("/posts/:postId/comments/:commentId", authMiddleware, async (req, res) => { 
   const commentId = req.params.commentId;
   const postId = req.params.postId;
-  const newPw = req.body.password;
-  const content = req.body.content;
+  const { content } = req.body;
+  const {userId} = res.locals.user;
 
-  const data = await Comment.find({commentId:commentId}).catch(console.error); 
-  const existPw = data[0].password // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
-
-  if (!commentId || !postId) {
+  const data = await Comment.find({userId, commentId}).catch(console.error); 
+ 
+  if (!commentId || !postId || !userId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다."
@@ -94,19 +96,9 @@ router.put("/posts/:postId/comments/:commentId", async (req, res) => {
       success: false,
       errorMessage: "댓글 내용을 입력해주세요."
     });
-  } else if (!newPw.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요."
-    });
-  } else if (existPw !== newPw) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호가 일치하지 않습니다."
-    });
-  } else if (existPw === newPw) {
+  } else {
     await Post.updateOne(
-      { commentId: commentId }, 
+      { userId, commentId: commentId }, 
       { $set: { content: content } }
       );
   };
@@ -118,16 +110,16 @@ router.put("/posts/:postId/comments/:commentId", async (req, res) => {
 
 
 
-// 9. 댓글 삭제 DELETE  (성공)
-router.delete("/posts/:postId/comments/:commentId", async (req, res) => {
+// 9. 댓글 삭제 API (DELETE : localhost:3000/api/posts/:postId/comments/:commentId)
+router.delete("/posts/:postId/comments/:commentId", authMiddleware, async (req, res) => {
   const commentId = req.params.commentId;
   const postId = req.params.postId;
-  const newPw = req.body.password;
+  const {userId} = res.locals.user;
  
-  const data = await Comment.find({commentId: commentId}).catch(console.error);
+  const data = await Comment.find({userId, commentId}).catch(console.error);
   const existPw = data[0].password // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
 
-  if (!commentId || !postId) {
+  if (!commentId || !postId || !userId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
@@ -137,18 +129,8 @@ router.delete("/posts/:postId/comments/:commentId", async (req, res) => {
       success: false,
       errorMessage: "댓글 조회에 실패하였습니다.",
     });
-  } else if (!newPw.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요."
-    });
-  } else if (existPw !== newPw) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호가 일치하지 않습니다."
-    });
-  } else if (existPw === newPw) {
-    await Post.deleteOne({commentId});
+  } else {
+    await Post.deleteOne({ userId, commentId });
   };
     return res.status(200).json({ 
       success: true,

@@ -1,30 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const Post = require("../schemas/post.js");
+const User = require("../schemas/user.js");
+const authMiddleware = require("../middlewares/auth-middleware.js")
 const { v4: uuidv4 } = require("uuid"); // posts에 자동생성되는 postsId
 
 
 
-// 1. 게시글 작성 POST API  (성공)
-router.post("/posts", async (req, res) => {
-  const { title, user, password, content } = req.body;
+// 1. 게시글 작성 API  (POST : localhost:3000/api/posts)
+router.post("/posts", authMiddleware, async (req, res) => {
+  const { title, content } = req.body;
+  const { userId } = res.locals.user; 
   const createdAt = new Date().toLocaleString();
   const postId = uuidv4();
 
-  if (!title.length) {
+   if (!title.length) {
     return res.status(400).json({
       success: false,
       errorMessage: "제목을 입력해주세요.",
-    });
-  } else if (!user.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "유저명을 입력해주세요.",
-    });
-  } else if (!password.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요.",
     });
   } else if (!content.length) {
     return res.status(400).json({
@@ -34,31 +27,29 @@ router.post("/posts", async (req, res) => {
   } else {
     await Post.create({
       postId: postId, // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
+      userId: userId,
       title: title,
-      user: user,
       content: content,
-      password: password,
       createdAt: createdAt 
     });
     return res.status(201).json({ 
       success: true,
-      message: "게시글이 작성되었습니다." 
+      message: "게시글이 작성되었습니다.", 
     });
   }
 });
 
 
 
-// 2. 전체 게시글 목록 조회 GET API  (성공)
+// 2. 전체 게시글 목록 조회 API (GET : localhost:3000/api/posts)
 router.get("/posts", async (req, res) => {
+  const nickname = User.findOne({nickname: nickname})
   const allPosts = await Post.find()
     .select({ //1 = true, 0 = false
       postId: 1,
-      user: 1,
       title: 1,
-      content: 1,
+      content: 0,    //목록조회에서 게시글내용은 안보여도됨
       createdAt: 1,
-      password: 0,
       _id: 0,
       __v: 0
     })
@@ -66,14 +57,9 @@ router.get("/posts", async (req, res) => {
     .exec();
     return res.status(200).json({ allPosts: allPosts });
 });
-// const filteredPosts = allPosts.map( post => {
-//   const {password, ...rest} = post     // ...rest가 스키마정보 틀까지 다 가져옴. 이렇게쓰면 X
-//   return rest;
-// });
 
 
-
-// 3. 단일 게시글 조회 GET API (성공)
+// 3. 단일 게시글 조회 API (GET : localhost:3000/api/posts/:postId)
 router.get("/posts/:postId", async (req, res) => {
   const postId = req.params.postId;
   const data = await Post.findOne(
@@ -96,19 +82,15 @@ router.get("/posts/:postId", async (req, res) => {
 
 
 
-// 4. 게시글 수정 PUT API (성공)
-router.put("/posts/:_postId", async (req, res) => {
-  const postId = req.params._postId;
-  const newPw = req.body.password;
-  const content = req.body.content;
+// 4. 게시글 수정 API (PUT : localhost:3000/api/posts/:postId)
+router.put("/posts/:postId", authMiddleware, async (req, res) => {
+  const postId = req.params.postId;
+  const {title, content} = req.body;
+  const { userId } = res.locals.user; 
 
-  const data = await Post.find({ postId: postId }).catch(console.error);
-  const existPw = data[0].password; // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
-  // console.log(data); 
-  // console.log(existPw);
-  // console.log(newPw);
+  const data = await Post.find({ userId, postId }).catch(console.error);
 
-  if (!postId) {
+  if (!postId || !userId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
@@ -123,20 +105,15 @@ router.put("/posts/:_postId", async (req, res) => {
       success: false,
       errorMessage: "게시글 내용을 입력해주세요.",
     });    
-  } else if (!newPw.length) {
+  } else if (!title.length) {
     return res.status(400).json({
       success: false,
-      errorMessage: "비밀번호를 입력해주세요.",
-    });
-  } else if (existPw !== newPw) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호가 일치하지 않습니다.",
+      errorMessage: "제목을 입력해주세요.",
     });    
-  } else if (existPw === newPw) {
+  } else {
     await Post.updateOne(
-      { postId: postId }, 
-      { $set: { content: content } }
+      { userId, postId: postId }, 
+      { $set: { title: title, content: content} }
       )
   };
     return res.status(200).json({
@@ -147,18 +124,14 @@ router.put("/posts/:_postId", async (req, res) => {
 
 
 
-// 5. 게시글 삭제 DELETE API  (성공)
-router.delete("/posts/:_postId", async (req, res) => {
-  const postId = req.params._postId;
-  const newPw = req.body.password;
+// 5. 게시글 삭제 API (DELETE : localhost:3000/api/posts/:postId)
+router.delete("/posts/:postId", authMiddleware, async (req, res) => {
+  const postId = req.params.postId;
+  const { userId } = res.locals.user;
 
-  const data = await Post.find({ postId: postId }).catch(console.error);
-  const existPw = data[0].password; // find함수로 찾은 data는 배열형식이므로 0번째 인덱스의 password를 가져와야함
-  // console.log(data);
-  // console.log(existPw);
-  // console.log(newPw);
+  const data = await Post.find({ userId, postId }).catch(console.error);
 
-  if (!postId) {
+  if (!postId || !userId) {
     return res.status(400).json({
       success: false,
       errorMessage: "데이터 형식이 올바르지 않습니다.",
@@ -168,18 +141,8 @@ router.delete("/posts/:_postId", async (req, res) => {
       success: false,
       errorMessage: "게시글 조회에 실패하였습니다.",
     });
-  } else if (!newPw.length) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호를 입력해주세요.",
-    });
-  } else if (existPw !== newPw) {
-    return res.status(400).json({
-      success: false,
-      errorMessage: "비밀번호가 일치하지 않습니다.",
-    });
-  } else if (existPw === newPw) {
-    await Post.deleteOne({ postId });
+  } else {
+    await Post.deleteOne({ userId, postId });
   }
     return res.status(200).json({
       success: true,

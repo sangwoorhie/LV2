@@ -3,7 +3,8 @@ mongoose.set("strictQuery", false);
 
 const connect = () => { 
     mongoose 
-        .connect("mongodb://127.0.0.1:27017/post", {      
+        .connect("mongodb://127.0.0.1:27017/post", { 
+        // .set("strictQuery", true)     
         // useNewUrlParser: true,
         // useUnifiedTopology: true,
         })
