@@ -14,7 +14,7 @@ router.post("/posts", authMiddleware, async (req, res) => {
   console.log('-'.repeat(40));
 
   const { title, content } = req.body;
-  const { userId } = res.locals.user; 
+  const { userId, nickname } = res.locals.user; 
   const createdAt = new Date().toLocaleString();
   const postId = uuidv4();
 
@@ -37,7 +37,7 @@ router.post("/posts", authMiddleware, async (req, res) => {
     await Post.create({
       postId: postId, // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
       userId: userId,
-      // nickname: nickname,
+      nickname: nickname, 
       title: title,
       content: content,
       createdAt: createdAt 
@@ -56,14 +56,15 @@ router.get("/posts", async (req, res) => {
   const allPosts = await Post.find()
     .select({ //1 = true, 0 = false
       postId: 1,
-      title: 1,   //목록조회에서 게시글내용은 안보여도됨
+      userId: 1,
+      nickname: 1,
+      title: 1,  
       createdAt: 1,
       _id: 0,
     })
     .sort({ createdAt: -1 })
     .exec();
-    // const nickname = await User.find({nickname})
-    return res.status(200).json({ allPosts }); // nickname
+    return res.status(200).json({ allPosts }); //
 });
 
 
@@ -73,6 +74,7 @@ router.get("/posts/:postId", async (req, res) => {
   const data = await Post.findOne(
     {postId: postId}, 
     { //1 = true, 0 = false
+      nickname: 1,
       postId: 0,
       password: 0,
       _id: 0,

@@ -16,9 +16,10 @@ const passwordCheck = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{4,}$/;
 // 1. 회원 가입 POST : localhost:3000/api/signup (성공)
 
 router.post('/signup', async(req, res) => {
-    const { nickname, password, confirmPassword } = req.body;
+    const { nickname, password, confirmPassword } = req.body; // 
     
-    try {const existNickname = await User.findOne(nickname).nickname
+    try {let existNickname = await User.find(nickname.nickname) // existNickname
+
 
     if (!nicknameCheck.test(nickname)) {
         res.status(412).json({
@@ -49,6 +50,7 @@ router.post('/signup', async(req, res) => {
         });
     }}
     catch (error) {
+        console.log("error=>", error)
         res.status(400).json({
             success: false,
             "errorMessage": "요청한 데이터 형식이 올바르지 않습니다.",

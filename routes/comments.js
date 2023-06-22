@@ -13,6 +13,8 @@ router.get("/comments/:postId", async (req, res) => {
   const comments = await Comment.find(
     {'postId': postId}, 
     { //1 = true, 0 = false
+      nickname: 1,
+      userId: 1,
       postId: 0,
       password: 0,
       _id: 0,
@@ -38,8 +40,11 @@ router.get("/comments/:postId", async (req, res) => {
 router.post("/comments/:postId", authMiddleware, async (req, res) => { 
   const postId = req.params.postId;
   const {content} = req.body;
-  const {userId} = res.locals.user;
-  // const nickname = User.findOne({nickname: nickname})
+  const {userId, nickname} = res.locals.user;
+
+  console.log('-'.repeat(40));
+  console.log("res.local.user =>", res.locals.user);
+  console.log('-'.repeat(40));
  
   const createdAt = new Date().toLocaleString();
   const commentId = uuidv4();
@@ -59,7 +64,7 @@ router.post("/comments/:postId", authMiddleware, async (req, res) => {
       postId : postId,
       userId: userId,        //create에 위에서 변수선언한 postId를 넣음으로써 postId를 해당 댓글에 생성한다
       commentId : commentId,  // 여기서 모든 key값들은 db컬럼(Studio 3T와 일치해야 한다)
-      // nickname : nickname,
+      nickname : nickname,
       content: content,  
       createdAt: createdAt,
     }); 

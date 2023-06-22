@@ -5,14 +5,12 @@ const User = require("../schemas/user.js")
 
 module.exports = async (req, res, next) => {
     const {Authorization} = req.cookies;
-    // console.log(req.cookies);
     // console.log(Authorization);
 
     // Authorization이 나오는 형태는 다음과 같음. => Bearer (띄어쓰기) jwt토큰 (header.payload.signature)
-    // 쿠키가 없다면 Authorization은 undefined 상태
-    // 쿠키가 없는 상태에서는 빈 문자열을 줘서 split함수를 쓰더라도 에러나지 않도록 함
-    // Authorization이 null 또는 undefined인 경우에는 빈 문자열 ""을 반환하고, 그렇지 않은 경우에는 Authorization 값을 반환
-    // 그 뒤에 split함수를 쓰고 " "하는 이유는 Bearer와 jwt토큰을 구분하기 위함.
+    // 쿠키가 없다면 Authorization은 undefined 상태, 이 상태에서는 null 병합 연산자로 빈 문자열을 줘서 에러나지 않도록 함
+    // Authorization이 null 또는 undefined인 경우에는 에러나지 않기 위해 빈 문자열 ""을 반환하고, 그렇지 않은 경우에는 Authorization 값을 반환
+    // 그 뒤에 split함수를 쓰고 " "하는 이유는 Bearer와 jwt토큰을 구분하기 위함. 따라서 따옴표 안에 띄어쓰기를 해야 함
     // .split(" ") => 띄어쓰기를 기준으로 나눔 .split("") => 모든 문자열마다 나눔
 
 
@@ -20,12 +18,12 @@ module.exports = async (req, res, next) => {
     // 2.autoToken 검증
 
     // authType에는 Authorization이, authToken에는 jwt토큰이 담긴다. 
-    // Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNDIwMzMsImV4cCI6MTY4NzM0NTYzM30.MpU53n7r3NaIBfVirdFHDUi1RW6Up0-KkEl46IyunME'
+    // Authorization: 'Bearer (한칸 띄어쓰기) eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNDIwMzMsImV4cCI6MTY4NzM0NTYzM30.MpU53n7r3NaIBfVirdFHDUi1RW6Up0-KkEl46IyunME'
     
     const [authType, authToken] = (Authorization ?? "").split(" ")  // null병합 연산자 + split함수
 
-    // console.log("authType =>", authType);
-    // console.log("authToken=>", authToken);
+    // console.log("authType =>", authType); // Bearer
+    // console.log("authToken=>", authToken); // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNDIwMzMsImV4cCI6MTY4NzM0NTYzM30.MpU53n7r3NaIBfVirdFHDUi1RW6Up0-KkEl46IyunME
 
     if(authType !== "Bearer" || !authToken){
         res.status(400).json({
@@ -41,12 +39,21 @@ module.exports = async (req, res, next) => {
     // 서버가 멈추지 말아야 하므로 try catch문 사용
     // auth.js에서 생성한 JWT정보를 가져옴
 
-    // authToken는 객체, 거기서 userId만 가져와야함. 그래서 findById(userId.userId)
+    // authToken는 jwt토큰 객체, 거기서 userId만 가져와야함. 그래서 점 찍음. findById(userId.userId)
 
     try{
         let userId = jwt.verify(authToken, "customized-secret-key"); // userId를 재할당한다. (인증값 성공시) 토큰을 해석한 유저 아이디(복호화)
         const user = await User.findById(userId.userId)  // userId는 User에 저장되는게 아니라 MongoDB에 저장돼있음 (_id) 로그인한 유저의 아이디
         res.locals.user = user; // findById : 해당 아이디의 모든 값을 가져온다
+        
+        if(!user || !userId){
+            res.status(400).json({
+                errorMessage: "로그인 후에 이용할 수 있는 기능입니다."
+            })
+            return;
+        };
+
+
         next(); 
         
         // 게시글작성시, 어떤 사용자가 작성하는지 확인하기 위해서는 사용자인증 미들웨어에서 해당사용자가 특정이 되면 특정된 사용자를 바탕으로 게시글작성함
@@ -63,18 +70,6 @@ module.exports = async (req, res, next) => {
         return;
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
